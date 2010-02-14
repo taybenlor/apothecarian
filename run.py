@@ -13,9 +13,11 @@ import pygame
 
 stream = InputStream()
 stream.start()
+
+#v = GarethVis(width = int(pymt_config.get('graphics', 'width')), height = int(pymt_config.get('graphics', 'height')), stream=stream )
+v = ParticleVisualisation(width = int(pymt_config.get('graphics', 'width')), height = int(pymt_config.get('graphics', 'height')), stream=stream)
  
-v = GarethVis(width = w.width, height = w.height, stream=stream)
- 
+
 try:
 	runTouchApp(v)
 finally:
