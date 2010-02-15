@@ -1,6 +1,7 @@
 from pymt import *
 from audio_input import InputStream
 import random, time, math
+from OpenGL.GL import *
  
 class Visualisation(MTWidget):
 	#-----------------
@@ -96,20 +97,27 @@ class CircleVisualisation(Visualisation):
  
 PARTICLE_LIMIT = 200
 class ParticleVisualisation(Visualisation):
-	def __init__(self, **kwargs):
+	def __init__(self, max=5000, **kwargs):
 		super(ParticleVisualisation, self).__init__(**kwargs)
-		self.particles = {}
-		self.uid = 0
+		self.image = Image('dot.png')
+		self.particles = []
+		self.max = max
+		for i in xrange(self.max):
+			self.particles.append(Particle())
+		self.count = 0
+		
  
 	def visualise(self, ticks):
+		self.count += ticks
 		graphx.colors.set_color(0.0, 0.0, 0.0)
 		graphx.draw.drawRectangle((self.x,self.y), (self.width, self.height))
  
 		cx, cy = self.center
 		angle = 0
 		spectrum = self.stream.get_audio_spectrum()
- 
-		if len(self.particles) < PARTICLE_LIMIT:
+		todo = []
+		if self.count > 50:
+			self.count = 0
 			for d in spectrum:
 				count = int(round(d))
  
@@ -124,41 +132,43 @@ class ParticleVisualisation(Visualisation):
  
 				#for i in xrange(count):
 				if count > 1:
-					self.particles[self.uid] = Particle(x, y, dx, dy)
-					self.uid += 1
+					todo.append((x, y, dx, dy))
  
 				angle += math.pi*2/(len(spectrum))
- 
-		for p in self.particles.keys():
-			self.particles[p].draw()
-			self.particles[p].update()
-			x, y = self.particles[p].x, self.particles[p].y
-			if x < 0 or y < 0 or x > self.width or y > self.height:
-				self.particles.pop(p)
- 
+		
+		glTexEnvf(GL_POINT_SPRITE_ARB, GL_COORD_REPLACE_ARB, GL_TRUE)
+		blend = GlBlending(sfactor=GL_SRC_ALPHA, dfactor=GL_ONE)
+		set_texture(self.image.texture)
+		glPointSize(25)
+		with DO(blend, gx_enable(self.image.texture.target), gx_enable(GL_POINT_SPRITE_ARB), gx_begin(GL_POINTS)):
+			for particle in self.particles:
+				if particle.visible:
+					particle.update(self.width, self.height)
+					glColor3f(*particle.color)
+					glVertex2f(particle.x, particle.y)
+				elif len(todo):
+					particle.animate(*todo.pop(-1))
+
+				
  
 class Particle(object):
-	def __init__(self, x, y, dx, dy, color=None, radius=None):
-		self.color = color
-		if self.color == None:
-			self.color = (random.random(), random.random(), random.random())
+	def __init__(self):
+		self.visible = False
  
-		self.radius = radius
-		if self.radius == None:
-			self.radius = random.randint(1,10)
- 
+	def update(self, wx, wy):
+		self.x += self.dx
+		self.y += self.dy
+		if self.x > wx or self.x < 0:
+			self.visible = False
+		elif self.y > wy or self.y < 0:
+			self.visible = False
+		
+	def animate(self, x, y, dx, dy):
 		self.x = x
 		self.y = y
 		self.dx = dx
 		self.dy = dy
-		self.alive = 0
- 
-	def update(self):
-		self.x += self.dx
-		self.y += self.dy
-		self.alive += 1
- 
-	def draw(self):
-		graphx.colors.set_color(*self.color)
-		graphx.draw.drawCircle((int(self.x), int(self.y)), self.radius)
+		self.color = (random.random(), random.random(), random.random())
+		self.size = (random.randint(10,40))
+		self.visible = True
  
