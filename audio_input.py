@@ -2,7 +2,8 @@ import pyaudio
 import sys
 import audioop
 from numpy import zeros, linspace, short, fromstring, hstack, transpose, mean, absolute, max, median
-from scipy import fft, concatenate
+from numpy import fft, concatenate
+fft = fft.fft
 from threading import Thread
 import random, time, math
  
