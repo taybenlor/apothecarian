@@ -7,15 +7,15 @@ from pygame.locals import *
 from pygame.color import *
 import pymunk as pm
 
-def add_ball(space):
+def add_ball(space, color):
     mass = 1
     radius = 14
     inertia = pm.moment_for_circle(mass, 0, radius, (0,0)) # 1
     body = pm.Body(mass, inertia) # 2
-    x = random.randint(100,600)
-    body.position = x, 150 # 3
-    shape = pm.Circle(body, radius, (0,0)) # 4
-    space.add(body, shape) # 5
+    x = random.randint(100,1100)
+    body.position = x, -400 # 3
+    shape = (pm.Circle(body, radius, (0,0)), color)# 4
+    space.add(body, shape[0]) # 5
     return shape
 
 def add_static_L(space, x1, y1, x2, y2):
@@ -50,8 +50,10 @@ def draw_lines(lines):
 
 	
 def draw_ball(ball):
-    p = int(ball.body.position.x), 600-int(ball.body.position.y)
-    graphx.draw.drawCircle(p, int(ball.radius))
+	pymt.graphx.colors.set_color(ball[1][0], ball[1][1], ball[1][2])
+	#print ball[1]
+	p = int(ball[0].body.position.x), 600-int(ball[0].body.position.y)
+	graphx.draw.drawCircle(p, int(ball[0].radius))
  
 class Visualisation(MTWidget):
 	#-----------------
@@ -89,10 +91,10 @@ class GarethVis(Visualisation):
 		self.space.gravity = (0.0, 900.0)
 		
 		self.lines = []
-		for j in xrange(0,5):
-			for i in xrange(0,10):
-				x1 = -200 + i * 80
-				y1 = j * 100
+		for j in xrange(0,7):
+			for i in xrange(0,13):
+				x1 = -200 + (i * 80)
+				y1 = -400 + (j * 100)
 				x2 = x1 + random.randint(-60,60)
 				y2 = y1 + random.randint(-60,60)
 				self.lines.append(add_static_L(self.space, x1, y1, x2, y2))
@@ -101,9 +103,7 @@ class GarethVis(Visualisation):
  
 	def visualise(self, ticks):
 	
-	
-	
-		graphx.colors.set_color(0.0,0.0,0.0)
+		graphx.colors.set_color(0,0,0)
 		graphx.draw.drawRectangle((self.x,self.y), (self.width, self.height))
 		graphx.colors.set_color(*self.fg_color)
 		
@@ -114,20 +114,22 @@ class GarethVis(Visualisation):
 
 		# Print the balls, and at the same time, remove those out of the screen
 		for ball in self.balls:
+			graphx.colors.set_color((random.random(), random.random(), random.random()))
 			draw_ball(ball)
-			if ball.body.position.y > 700: # 1
+			if ball[0].body.position.y > 700: # 1
 				balls_to_remove.append(ball) # 2
 				
 		for ball in balls_to_remove:
-			self.space.remove(ball, ball.body) # 3
+			self.space.remove(ball[0], ball[0].body) # 3
 			self.balls.remove(ball) # 4
 	
  
 		#if its a beat change the fg colour and add more balls
 		if self.stream.is_beat():
 			if (self.off):
+				color = (random.random(), random.random(), random.random())
 				for i in xrange(0,5):
-					ball_shape = add_ball(self.space)
+					ball_shape = add_ball(self.space, color)
 					self.balls.append(ball_shape)
 				self.fg_color = (random.random(), random.random(), random.random())
 			self.off = not self.off

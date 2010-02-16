@@ -202,7 +202,7 @@ class BenWindow(ui.window.BaseWindow):
             self._modifiers.append('ctrl')
  
  
-w = BenWindow(fullscreen=False, width=1000, height=800)
+w = BenWindow(fullscreen=False, width=1280, height=1024)
  
  
 stream = InputStream()
