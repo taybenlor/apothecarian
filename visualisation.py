@@ -2,6 +2,7 @@ from pymt import *
 from audio_input import InputStream
 import random, time, math
 from OpenGL.GL import *
+from numpy import maximum, array
  
 class Visualisation(MTWidget):
 	#-----------------
@@ -31,6 +32,10 @@ class BasicVisualisation(Visualisation):
 	def __init__(self, **kwargs):
 		super(BasicVisualisation, self).__init__(**kwargs)
 		self.bg_color = (0.0, 0.0, 0.0)
+		self.lit_color = (0.0, 0.8, 0.0)
+		self.unlit_color=(0.2,0.2,0.2)
+		self.max_color=(0.8, 0.0, 0.0)
+		self.maxes = None
  
 	def visualise(self, ticks):
 		#draw the background		
@@ -38,48 +43,75 @@ class BasicVisualisation(Visualisation):
 		graphx.draw.drawRectangle((0,0), (self.width, self.height))
  
 		#get our visualisation values
-		val = self.stream.get_average_energy() # 0.0 -> 1.0
-		spectrum = self.stream.get_audio_spectrum() # array of floats (each value is contribution, takes optional number of buckets)
- 
-		#draw the foreground
-		graphx.colors.set_color(1.0,1.0,1.0)
-		#circle in the middle of the widget with radius val* (1/3 of screen) means circle can only be as bit as 2/3rds screen
-		graphx.draw.drawCircle(self.center, val * (self.width/3))
- 
+		spectrum = array(self.stream.get_log_audio_spectrum()) # array of floats (each value is contribution, takes optional number of buckets)
+		#note, this one is slower and can only return about 10 buckets max
+ 		if self.maxes == None:
+			self.maxes = spectrum
+		else:
+			self.maxes -= 0.1
+			self.maxes = maximum(self.maxes, spectrum)
+
 		#draw points evenly across the screen
-		points = []
 		x_mul = self.width/len(spectrum)
+		width = int(x_mul*0.9)
+		height = self.height/100
+		#height = int(h*0.8)
+		#gap = int(h*0.2)
 		for i, item in enumerate(spectrum):
-			points.append(i*x_mul) #x coordinate of point
-			points.append(item*150) #y coordinate of point (ie height = spectrum contribution)
-		graphx.draw.drawLine(points)
+			x = int((x_mul * i) + ((x_mul * 0.1)/2))
+			val = int(item*100)
+			vmax = int(self.maxes[i]*100)
+			for j in xrange(100):
+				if j == vmax:
+					graphx.colors.set_color(*self.max_color)
+				elif val > j:
+					#lit bar
+					graphx.colors.set_color(*self.lit_color)
+				else:
+					graphx.colors.set_color(*self.unlit_color)
+				
+				graphx.draw.drawLine([x, j*height, x+width, j*height], int(height*0.8))
+					#unlit bar
  
 		#if its a beat randomly change the background colour
-		if self.stream.is_beat():
-			self.bg_color = (random.random(), random.random(), random.random())
+		#if self.stream.is_beat():
+		#	self.bg_color = (random.random(), random.random(), random.random())
  
 class CircleVisualisation(Visualisation):
 	def __init__(self, **kwargs):
 		super(CircleVisualisation, self).__init__(**kwargs)
 		self.fg_color = (1.0, 1.0, 1.0)
+		self.history = None
+		self.volume = 0
  
 	def visualise(self, ticks):
 		graphx.colors.set_color(0.0,0.0,0.0)
 		graphx.draw.drawRectangle((self.x,self.y), (self.width, self.height))
  
 		graphx.colors.set_color(*self.fg_color)
-		val = self.stream.get_average_energy() * (self.width/3)
+		self.volume -= 0.01
+		val = self.stream.get_average_energy()
+		self.volume = max(self.volume, val)
+		val = self.volume * (self.width/2)
 		graphx.draw.drawCircle(self.center, val)
  
+		#fall gracefully
+		spectrum = array(self.stream.get_normal_audio_spectrum(100))
+		if self.history != None:
+			self.history -= 0.01
+			self.history = maximum(self.history, spectrum)
+		else:
+			self.history = spectrum
+		
 		#arrange the points around in a circle
 		cx, cy = self.center
 		length = val
 		angle = 0
-		spectrum = self.stream.get_audio_spectrum()
+
 		points = []
-		for d in spectrum:
-			lx = ((d * 75) +val) * math.cos(angle)
-			ly = ((d * 75)+val) * math.sin(angle)
+		for d in self.history:
+			lx = ((d * (self.width/2)) +val) * math.cos(angle)
+			ly = ((d * (self.width/2))+val) * math.sin(angle)
  
 			points.append(cx+lx)
 			points.append(cy+ly)
@@ -162,7 +194,7 @@ class ParticleVisualisation(Visualisation):
 					particle.animate(*todo.pop(-1))
 
  
-GRAVITY_WELL_FORCE = 400000
+GRAVITY_WELL_FORCE = 200000
 class Particle(object):
 	def __init__(self):
 		self.visible = False
@@ -171,22 +203,25 @@ class Particle(object):
 		self.update_velocity(gravity_wells)
 		self.x += self.dx
 		self.y += self.dy
-		self.alpha -= 0.02
+		self.alpha -= self.decay
+		self.decay *= self.decay_rate
 		if self.alpha <= 0.0:
 			self.visible = False
-		if self.x > wx or self.x < 0:
+		if self.x > wx*1.5 or self.x < (0-wx*0.5):
 			self.visible = False
-		elif self.y > wy or self.y < 0:
+		elif self.y > wy*1.5 or self.y < (0-wy*0.5):
 			self.visible = False
 		
 	def update_velocity(self, gravity_wells=[]):
+		self.dx *=0.95
+		self.dy *=0.95
 		if not gravity_wells:
 			return 
 		for wx,wy in gravity_wells:
 			distance = ((self.x - wx)**2 + (self.y - wy)**2)**0.5
 			ndx = (wx-self.x)/(distance+0.01)
 			ndy = (wy-self.y)/(distance+0.01)
-			gf = GRAVITY_WELL_FORCE*((1/(distance+0.01))**2)
+			gf = (GRAVITY_WELL_FORCE)*((1/(distance+0.01))**2)
 			fdx = ndx*gf
 			fdy = ndy*gf
 			self.dx += fdx
@@ -200,6 +235,8 @@ class Particle(object):
 		self.dy = dy
 		self.color = (random.uniform(0, 1.0), random.uniform(0.0, 1.0), random.uniform(0.0, 1.0))
 		self.alpha = 1.0
+		self.decay = 0.01
+		self.decay_rate = 1.05
 		self.size = (random.randint(10,40))
 		self.visible = True
  
