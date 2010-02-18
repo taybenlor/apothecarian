@@ -11,32 +11,35 @@ from OpenGL.GL import *
 # so to fix windowing issues do:
 # python -m pymt.tools.config -n
 #--------------------
-	
+
 stream = InputStream()
 stream.start()
 
 i = 0
 visualisations = [BasicVisualisation, CircleVisualisation, ParticleVisualisation, GarethVis]
 
-a = MTWidget()
+
+#b = MTScatterWidget(width = int(pymt_config.get('graphics', 'width')), height = int(pymt_config.get('graphics', 'height')))
 #v = GarethVis(width = int(pymt_config.get('graphics', 'width')), height = int(pymt_config.get('graphics', 'height')), stream=stream )
 v = BasicVisualisation(width = int(pymt_config.get('graphics', 'width')), height = int(pymt_config.get('graphics', 'height')), stream=stream)
-a.add_widget(v)
+container = MTWidget()
+container.add_widget(v)
 
-change = MTButton(label='Change Visualisation', pos=(0,0),size=(100, 50))
-a.add_widget(change)
+change = MTButton(label='Change Visualisation', pos=(20,20),size=(100, 50))
+root = MTWidget()
+root.add_widget(container)
+root.add_widget(change)
 
 @change.event
 def on_press(touch):
 	global v, i
-	a.remove_widget(v)
+	container.remove_widget(v)
 	i += 1
 	i%=len(visualisations)
 	v = visualisations[i](width = int(pymt_config.get('graphics', 'width')), height = int(pymt_config.get('graphics', 'height')), stream=stream)
-	a.add_widget(v)
-	change.bring_to_front()
-
+	container.add_widget(v)
+	
 try:
-	runTouchApp(a)
+	runTouchApp(root)
 finally:
 	stream.close()

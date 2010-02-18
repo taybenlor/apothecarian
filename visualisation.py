@@ -28,7 +28,7 @@ class Visualisation(MTWidget):
 	def visualise(self, ticks):
 		pass
  
-class BasicVisualisation(Visualisation):
+class BasicVisualisation(Visualisation, MTScatterWidget):
 	def __init__(self, **kwargs):
 		super(BasicVisualisation, self).__init__(**kwargs)
 		self.bg_color = (0.0, 0.0, 0.0)
@@ -158,27 +158,24 @@ class ParticleVisualisation(Visualisation):
  
 		cx, cy = self.center
 		angle = 0
-		spectrum = self.stream.get_audio_spectrum()
+		spectrum = self.stream.get_normal_audio_spectrum(100)
 		todo = []
-		if self.count > 50:
-			self.count = 0
-			for d in spectrum:
-				count = int(round(d))
+		for d in spectrum: 
+			d*=100
+			dx = math.cos(angle)
+			dy = math.sin(angle)
  
-				dx = math.cos(angle)
-				dy = math.sin(angle)
+			x = cx + random.randint(-10, 10)
+			y = cy + random.randint(-10, 10)
  
-				x = cx + random.randint(-10, 10)
-				y = cy + random.randint(-10, 10)
+			dx *= 20
+			dy *= 20
  
-				dx *= 20
-				dy *= 20
+			#for i in xrange(count):
+			if d > 5:
+				todo.append((x, y, dx, dy))
  
-				#for i in xrange(count):
-				if count > 1:
-					todo.append((x, y, dx, dy))
- 
-				angle += math.pi*2/(len(spectrum))
+			angle += math.pi*2/(len(spectrum))
 		
 		glTexEnvf(GL_POINT_SPRITE_ARB, GL_COORD_REPLACE_ARB, GL_TRUE)
 		blend = GlBlending(sfactor=GL_SRC_ALPHA, dfactor=GL_ONE)
@@ -234,6 +231,7 @@ class Particle(object):
 		self.dx = dx
 		self.dy = dy
 		self.color = (random.uniform(0, 1.0), random.uniform(0.0, 1.0), random.uniform(0.0, 1.0))
+		#self.color=(0.0,0.8,0.0)
 		self.alpha = 1.0
 		self.decay = 0.01
 		self.decay_rate = 1.05
