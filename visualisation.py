@@ -2,7 +2,7 @@ from pymt import *
 from audio_input import InputStream
 import random, time, math
 from OpenGL.GL import *
-from numpy import maximum, array
+from numpy import maximum, array, arange
  
 class Visualisation(MTWidget):
 	#-----------------
@@ -43,7 +43,7 @@ class BasicVisualisation(Visualisation, MTScatterWidget):
 		graphx.draw.drawRectangle((0,0), (self.width, self.height))
  
 		#get our visualisation values
-		spectrum = array(self.stream.get_log_audio_spectrum()) # array of floats (each value is contribution, takes optional number of buckets)
+		spectrum = array(self.stream.get_log_audio_spectrum(8)) # array of floats (each value is contribution, takes optional number of buckets)
 		#note, this one is slower and can only return about 10 buckets max
  		if self.maxes == None:
 			self.maxes = spectrum
@@ -238,3 +238,59 @@ class Particle(object):
 		self.size = (random.randint(10,40))
 		self.visible = True
  
+
+class WaveVisualisation(Visualisation):
+	def __init__(self, **kwargs):
+		super(WaveVisualisation, self).__init__(**kwargs)
+		self.image = Image('dot.png')
+		self.fg_color = (0.2,1.0,0.2)
+		self.beat_count = 0
+
+	def visualise(self, ticks):
+		ad = self.stream.audio_data
+		width = self.width/float(len(ad))
+		ad = ad * (self.height/6.0)
+		xpoints = []
+		ypoints = []
+		for i, y in enumerate(ad):
+			xpoints.append(i*width)
+			ypoints.append(y + (self.height/2))
+			
+		#graphx.colors.set_color(1.0,1.0,1.0)
+		#graphx.draw.drawLine(points)
+		
+		glTexEnvf(GL_POINT_SPRITE_ARB, GL_COORD_REPLACE_ARB, GL_TRUE)
+		blend = GlBlending(sfactor=GL_SRC_ALPHA, dfactor=GL_ONE)
+		set_texture(self.image.texture)
+		glPointSize(5)
+		with DO(blend, gx_enable(self.image.texture.target), gx_enable(GL_POINT_SPRITE_ARB), gx_begin(GL_POINTS)):
+			prev = 0
+			points = 5
+			for i in xrange(len(xpoints)-1):
+				x_now = xpoints[i]
+				x_next = xpoints[i+1]
+				y_now = ypoints[i]
+				y_next = ypoints[i+1]
+				step = 2
+				if y_next < y_now:
+					step = -step
+				y_range = arange(y_now, y_next, step)
+				x_range = arange(x_now, x_next, width/(float(len(y_range))+0.001))
+				for x,y in zip(x_range,y_range):
+					glColor3f(*self.fg_color)
+					glVertex2f(x,y)
+		
+		if self.stream.is_beat():
+			self.beat_count += 1
+			if self.beat_count == 4:
+				self.fg_color = (random.random(), random.random(), random.random())
+				self.beat_count = 0
+			
+		
+				
+				
+				
+				
+				
+		
+			

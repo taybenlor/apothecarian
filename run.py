@@ -16,7 +16,7 @@ stream = InputStream()
 stream.start()
 
 i = 0
-visualisations = [BasicVisualisation, CircleVisualisation, ParticleVisualisation, GarethVis]
+visualisations = [BasicVisualisation, CircleVisualisation, ParticleVisualisation, GarethVis, WaveVisualisation]
 
 
 #b = MTScatterWidget(width = int(pymt_config.get('graphics', 'width')), height = int(pymt_config.get('graphics', 'height')))

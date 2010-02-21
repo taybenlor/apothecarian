@@ -166,17 +166,21 @@ class InputStream(Thread):
 	
 	#normalised audio spectrum between 0.0 and 1.0 each bucket contains twice as many frequency buckets as the previous as per the way the ear works
 	def get_log_audio_spectrum(self, buckets=7):
-		fft_data = self.get_audio_spectrum((2**buckets))
+		fft_data = self.get_audio_spectrum((2**buckets)-(buckets+1))
 		log_fft_data = []
-		low = 0
-		high = 1
+		low = 1
+		high = 2
 		for i in xrange(buckets):
-			log_fft_data.append(sum(fft_data[low:high]))
-			low = high
+			log_fft_data.append(sum(fft_data[(low):(high)]))
+			low = high + 1
 			high *= 2
-			
+			high += 1
+		
+		self.max_bucket -= 0.01
 		self.max_bucket = max([self.max_bucket, max(log_fft_data)])
-		return array(log_fft_data)/self.max_bucket
+		return array(log_fft_data)/(self.max_bucket+0.001)
+		
+	
 
 	def get_average_energy(self):
 		if self.audio_data == None:
