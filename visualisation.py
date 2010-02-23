@@ -44,6 +44,7 @@ class BasicVisualisation(Visualisation, MTScatterWidget):
  
 		#get our visualisation values
 		spectrum = array(self.stream.get_log_audio_spectrum(8)) # array of floats (each value is contribution, takes optional number of buckets)
+		spectrum = spectrum[1:-1] #get rid of useless buckets
 		#note, this one is slower and can only return about 10 buckets max
  		if self.maxes == None:
 			self.maxes = spectrum
@@ -249,7 +250,7 @@ class WaveVisualisation(Visualisation):
 	def visualise(self, ticks):
 		ad = self.stream.audio_data
 		width = self.width/float(len(ad))
-		ad = ad * (self.height/6.0)
+		ad = ad * (self.height/3.0)
 		xpoints = []
 		ypoints = []
 		for i, y in enumerate(ad):
@@ -262,22 +263,24 @@ class WaveVisualisation(Visualisation):
 		glTexEnvf(GL_POINT_SPRITE_ARB, GL_COORD_REPLACE_ARB, GL_TRUE)
 		blend = GlBlending(sfactor=GL_SRC_ALPHA, dfactor=GL_ONE)
 		set_texture(self.image.texture)
-		glPointSize(5)
+		glPointSize(10)
+		r,g,b = self.fg_color
 		with DO(blend, gx_enable(self.image.texture.target), gx_enable(GL_POINT_SPRITE_ARB), gx_begin(GL_POINTS)):
 			prev = 0
 			points = 5
 			for i in xrange(len(xpoints)-1):
+				oa = abs((i/float(len(xpoints))) - 0.5)
+				glColor4f(r,g,b,0.5-oa)
 				x_now = xpoints[i]
 				x_next = xpoints[i+1]
 				y_now = ypoints[i]
 				y_next = ypoints[i+1]
-				step = 2
+				step = 3
 				if y_next < y_now:
 					step = -step
 				y_range = arange(y_now, y_next, step)
 				x_range = arange(x_now, x_next, width/(float(len(y_range))+0.001))
 				for x,y in zip(x_range,y_range):
-					glColor3f(*self.fg_color)
 					glVertex2f(x,y)
 		
 		if self.stream.is_beat():
@@ -285,12 +288,3 @@ class WaveVisualisation(Visualisation):
 			if self.beat_count == 4:
 				self.fg_color = (random.random(), random.random(), random.random())
 				self.beat_count = 0
-			
-		
-				
-				
-				
-				
-				
-		
-			
