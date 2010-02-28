@@ -2,7 +2,7 @@ import pyaudio
 import sys
 import audioop
 from numpy import zeros, linspace, short, fromstring, hstack, transpose, mean, absolute, max, median
-from numpy import fft, concatenate
+from numpy import fft, concatenate, array
 fft = fft.fft
 from threading import Thread
 import random, time, math
@@ -28,8 +28,9 @@ class InputStream(Thread):
 		self.iscand = False
 		self.next_beats = []
 		self.expected_dist = -1
- 
- 
+		self.max_bucket = 0
+		self.max_normal_bucket = 0
+		self.max_ben = 0
  
 	def is_a_beat(self, samples, time_offset):
 		avg = mean(absolute(samples))
@@ -149,9 +150,33 @@ class InputStream(Thread):
  
 	def get_audio_spectrum(self, buckets=100):
 		if self.audio_data == None:
-			return [0]*100
+			return [0]*buckets
 		return abs(fft(self.audio_data, 2*buckets))[:buckets]
- 
+		
+	def get_normal_audio_spectrum(self, buckets=10):
+		fft_data = self.get_audio_spectrum(buckets)
+		self.max_normal_bucket -= 0.001
+		self.max_normal_bucket = max([self.max_normal_bucket, max(fft_data)])
+		return fft_data/(self.max_normal_bucket+0.01)
+	
+	#normalised audio spectrum between 0.0 and 1.0 each bucket contains twice as many frequency buckets as the previous as per the way the ear works
+	def get_log_audio_spectrum(self, buckets=7):
+		fft_data = self.get_audio_spectrum((2**buckets)-(buckets+1))
+		log_fft_data = []
+		low = 1
+		high = 2
+		for i in xrange(buckets):
+			log_fft_data.append(sum(fft_data[(low):(high)]))
+			low = high + 1
+			high *= 2
+			high += 1
+		
+		self.max_bucket -= 0.01
+		self.max_bucket = max([self.max_bucket, max(log_fft_data)])
+		return array(log_fft_data)/(self.max_bucket+0.001)
+		
+	
+
 	def get_average_energy(self):
 		if self.audio_data == None:
 			return 0
