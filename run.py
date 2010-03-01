@@ -17,7 +17,7 @@ stream.start()
 
 i = 0
 visualisations = [BasicVisualisation, CircleVisualisation, ParticleVisualisation, GarethVis, WaveVisualisation]
-
+#visualisations = [BasicVisualisation, CircleVisualisation, ParticleVisualisation, GarethVis, WaveVisualisation, ThreedVis] ThreedVis breaks drawing at the moment
 
 #b = MTScatterWidget(width = int(pymt_config.get('graphics', 'width')), height = int(pymt_config.get('graphics', 'height')))
 #v = GarethVis(width = int(pymt_config.get('graphics', 'width')), height = int(pymt_config.get('graphics', 'height')), stream=stream )

@@ -3,6 +3,10 @@ from audio_input import InputStream
 import random, time, math
 from OpenGL.GL import *
 from numpy import maximum, array, arange
+
+
+
+
  
 class Visualisation(MTWidget):
 	#-----------------
@@ -27,6 +31,101 @@ class Visualisation(MTWidget):
 	#------------------
 	def visualise(self, ticks):
 		pass
+		
+		
+class GParticle():
+	def __init__(self, x, y, z, dx, dy, dz, width, height):
+		self._x = x
+		self._y = y
+		self._z = z
+		self.dx = dx
+		self.dy = dy
+		self.dz = dz
+		self.color = (random.uniform(0, 1.0), random.uniform(0.0, 1.0), random.uniform(0.0, 1.0))
+		#self.color=(0.0,0.8,0.0)
+		self.alpha = 1.0
+		self.width = width
+		self.height = height
+		
+	@property
+	def x(self):
+		return (self.width/2) + self._x
+	
+	@property
+	def y(self):
+		return (self.height/2) + self._y
+		
+	@property
+	def z(self):
+		return self._z
+	
+	
+	def phys(self):
+		self._z += 1
+		
+	def aphys(self):
+		GRAVITY = 100
+		grav_dist = ((self._x ** 2) + (self._y ** 2) + (self._z ** 2)) ** 0.5
+		distance = grav_dist + 0.01
+		
+		ndx = (self._x-40)/(distance)
+		ndy = (self._y-40)/(distance)
+		ndz = (self._z-40)/(distance)
+		gf = (GRAVITY)*((1/(distance+0.01))**2)
+		fdx = ndx*gf
+		fdy = ndy*gf
+		fdz = ndz*gf
+		self.dx += fdx
+		self.dy += fdy
+		self.dz += fdz
+		
+		self._x += self.dx
+		self._y += self.dy
+		self._z += self.dz
+
+	
+		
+		
+		
+class ThreedVis(Visualisation):
+	def __init__(self, **kwargs):
+		super(ThreedVis, self).__init__(**kwargs)
+		self.image = Image('dot.png')
+		self.bg_color = (0.0, 0.0, 0.0)
+		self.particles = []
+		for i in xrange(0,5):
+			self.particles.append(GParticle(10  +(i*1),10,-2,0,0,0, self.width, self.height));
+		
+		
+	def visualise(self, ticks):	
+		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)
+		blend = GlBlending(sfactor=GL_SRC_ALPHA, dfactor=GL_ONE)
+		set_texture(self.image.texture)
+		glPointSize(10)
+		with DO(blend, gx_enable(self.image.texture.target), gx_enable(GL_POINT_SPRITE_ARB), gx_begin(GL_QUADS)):
+
+			# Front Face (note that the texture's corners have to match the quad's corners)
+			glTexCoord2f(0.0, 0.0) 
+			glVertex3f(-1.0, -1.0,  -2.0)	# Bottom Left Of The Texture and Quad
+			glTexCoord2f(1.0, 0.0) 
+			glVertex3f( 1.0, -1.0,  -2.0)	# Bottom Right Of The Texture and Quad
+			glTexCoord2f(1.0, 1.0)
+			glVertex3f( 1.0,  1.0,  -2.0)	# Top Right Of The Texture and Quad
+			glTexCoord2f(0.0, 1.0)
+			glVertex3f(-1.0,  1.0,  -2.0)	# Top Left Of The Texture and Quad
+			
+			#for particle in self.particles:
+				#glPointSize(10)#/(particle.z + 10))
+				#particle.phys()
+				#glColor4f(particle.color[0], particle.color[1], particle.color[2], particle.alpha)
+				#glVertex3f(particle.x, particle.y, particle.z)
+		
+		#with DO(blend, gx_enable(self.image.texture.target), gx_enable(GL_POINT_SPRITE_ARB), gx_begin(GL_POINTS)):
+		#	for particle in self.particles:
+		#		if True:
+		#			#particle.phys()
+		#			glColor4f(particle.color[0], particle.color[1], particle.color[2], particle.alpha)
+		#			glVertex3f(particle.x, particle.y, particle.z)	
  
 class BasicVisualisation(Visualisation, MTScatterWidget):
 	def __init__(self, **kwargs):
@@ -84,6 +183,7 @@ class CircleVisualisation(Visualisation):
 		self.fg_color = (1.0, 1.0, 1.0)
 		self.history = None
 		self.volume = 0
+		self.image = Image('dot.png')
  
 	def visualise(self, ticks):
 		graphx.colors.set_color(0.0,0.0,0.0)
@@ -94,6 +194,15 @@ class CircleVisualisation(Visualisation):
 		val = self.stream.get_average_energy()
 		self.volume = max(self.volume, val)
 		val = self.volume * (self.width/2)
+		
+		#glTexEnvf(GL_POINT_SPRITE_ARB, GL_COORD_REPLACE_ARB, GL_TRUE)
+		#blend = GlBlending(sfactor=GL_SRC_ALPHA, dfactor=GL_ONE)
+		#set_texture(self.image.texture)
+		#glPointSize(val)
+		#with DO(blend, gx_enable(self.image.texture.target), gx_enable(GL_POINT_SPRITE_ARB), gx_begin(GL_POINTS)):
+		#		glColor3f(*self.fg_color)
+		#		glVertex2f(*self.center)
+		
 		graphx.draw.drawCircle(self.center, val)
  
 		#fall gracefully
@@ -243,7 +352,7 @@ class Particle(object):
 class WaveVisualisation(Visualisation):
 	def __init__(self, **kwargs):
 		super(WaveVisualisation, self).__init__(**kwargs)
-		self.image = Image('dot.png')
+		self.image = Image('dot4.png')
 		self.fg_color = (0.2,1.0,0.2)
 		self.beat_count = 0
 
@@ -263,14 +372,15 @@ class WaveVisualisation(Visualisation):
 		glTexEnvf(GL_POINT_SPRITE_ARB, GL_COORD_REPLACE_ARB, GL_TRUE)
 		blend = GlBlending(sfactor=GL_SRC_ALPHA, dfactor=GL_ONE)
 		set_texture(self.image.texture)
-		glPointSize(10)
+		glPointSize(8)
 		r,g,b = self.fg_color
 		with DO(blend, gx_enable(self.image.texture.target), gx_enable(GL_POINT_SPRITE_ARB), gx_begin(GL_POINTS)):
 			prev = 0
 			points = 5
 			for i in xrange(len(xpoints)-1):
-				oa = abs((i/float(len(xpoints))) - 0.5)
-				glColor4f(r,g,b,0.5-oa)
+				oa = abs((i/float(len(xpoints))) - 0.5)*2
+				glColor4f(r,g,b,1.0-oa)
+				glVertex2f(xpoints[i], ypoints[i+1])
 				x_now = xpoints[i]
 				x_next = xpoints[i+1]
 				y_now = ypoints[i]
