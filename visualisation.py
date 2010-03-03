@@ -4,9 +4,6 @@ import random, time, math
 from OpenGL.GL import *
 from numpy import maximum, array, arange
 
-
-
-
  
 class Visualisation(MTWidget):
 	#-----------------
@@ -82,10 +79,7 @@ class GParticle():
 		self._x += self.dx
 		self._y += self.dy
 		self._z += self.dz
-
 	
-		
-		
 		
 class ThreedVis(Visualisation):
 	def __init__(self, **kwargs):
@@ -94,10 +88,10 @@ class ThreedVis(Visualisation):
 		self.bg_color = (0.0, 0.0, 0.0)
 		self.particles = []
 		for i in xrange(0,5):
-			self.particles.append(GParticle(10  +(i*1),10,-2,0,0,0, self.width, self.height));
+			self.particles.append(GParticle(10	+(i*1),10,-2,0,0,0, self.width, self.height));
 		
 		
-	def visualise(self, ticks):	
+	def visualise(self, ticks): 
 		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)
 		blend = GlBlending(sfactor=GL_SRC_ALPHA, dfactor=GL_ONE)
 		set_texture(self.image.texture)
@@ -106,13 +100,13 @@ class ThreedVis(Visualisation):
 
 			# Front Face (note that the texture's corners have to match the quad's corners)
 			glTexCoord2f(0.0, 0.0) 
-			glVertex3f(-1.0, -1.0,  -2.0)	# Bottom Left Of The Texture and Quad
+			glVertex3f(-1.0, -1.0,	-2.0)	# Bottom Left Of The Texture and Quad
 			glTexCoord2f(1.0, 0.0) 
-			glVertex3f( 1.0, -1.0,  -2.0)	# Bottom Right Of The Texture and Quad
+			glVertex3f( 1.0, -1.0,	-2.0)	# Bottom Right Of The Texture and Quad
 			glTexCoord2f(1.0, 1.0)
-			glVertex3f( 1.0,  1.0,  -2.0)	# Top Right Of The Texture and Quad
+			glVertex3f( 1.0,  1.0,	-2.0)	# Top Right Of The Texture and Quad
 			glTexCoord2f(0.0, 1.0)
-			glVertex3f(-1.0,  1.0,  -2.0)	# Top Left Of The Texture and Quad
+			glVertex3f(-1.0,  1.0,	-2.0)	# Top Left Of The Texture and Quad
 			
 			#for particle in self.particles:
 				#glPointSize(10)#/(particle.z + 10))
@@ -145,7 +139,7 @@ class BasicVisualisation(Visualisation, MTScatterWidget):
 		spectrum = array(self.stream.get_log_audio_spectrum(8)) # array of floats (each value is contribution, takes optional number of buckets)
 		spectrum = spectrum[1:-1] #get rid of useless buckets
 		#note, this one is slower and can only return about 10 buckets max
- 		if self.maxes == None:
+		if self.maxes == None:
 			self.maxes = spectrum
 		else:
 			self.maxes -= 0.1
@@ -398,3 +392,81 @@ class WaveVisualisation(Visualisation):
 			if self.beat_count == 4:
 				self.fg_color = (random.random(), random.random(), random.random())
 				self.beat_count = 0
+				
+class BalloonVisualisation(Visualisation):
+	def __init__(self, **kwargs):
+		super(BalloonVisualisation, self).__init__(**kwargs)
+		self.balloons = {}
+		self.id = 0
+		self.image = Image('string.png')
+		
+	def visualise(self, ticks):
+		blue = 0.231372549019608, 0.725490196078431, 1.0
+		graphx.colors.set_color(*blue)
+		graphx.draw.drawRectangle((self.x,self.y), (self.width, self.height))
+		
+		intensity = self.stream.get_average_energy()
+		freq_dist = array(self.stream.get_log_audio_spectrum(8))
+		big_i = 0
+		for i, val in enumerate(freq_dist):
+			if val > freq_dist[big_i]:
+				big_i = val
+		
+		x = (random.random()*self.width)
+		if self.stream.is_beat():
+			self.balloons[self.id] = (Balloon(intensity * 1500, x, intensity))
+			self.id += 1
+		
+		for key in self.balloons.keys():
+			balloon = self.balloons[key]
+			balloon.update(ticks)
+			graphx.colors.set_color(*balloon.colour)
+			graphx.draw.drawCircle((balloon.x, balloon.y), balloon.radius)
+			if balloon.x < 0 - balloon.radius or balloon.x > self.width + balloon.radius or balloon.y > self.height + balloon.radius:
+				self.balloons.pop(key)
+			graphx.colors.set_color(1.0,1.0,1.0)
+
+			pos = (balloon.x-10, (balloon.y - balloon.radius)-64)
+			size = (20,64)
+			texcoords = (0.0,0.0, 1.0,0.0, 1.0,1.0, 0.0,1.0)
+			texture = self.image.texture
+			stmt = gx_texture(texture)
+			stmt.bind()
+			if type(texture) in (pymt.Texture, pymt.TextureRegion):
+				texcoords = texture.tex_coords
+
+			pos = ( pos[0], pos[1],
+					pos[0] + size[0], pos[1],
+					pos[0] + size[0], pos[1] + size[1],
+					pos[0], pos[1] + size[1])
+
+			blend = GlBlending(sfactor=GL_SRC_ALPHA, dfactor=GL_ONE)
+			with DO(blend, gx_begin(GL_QUADS)):
+				glTexCoord2f(texcoords[0], texcoords[1])
+				glVertex2f(pos[0], pos[1])
+				glTexCoord2f(texcoords[2], texcoords[3])
+				glVertex2f(pos[2], pos[3])
+				glTexCoord2f(texcoords[4], texcoords[5])
+				glVertex2f(pos[4], pos[5])
+				glTexCoord2f(texcoords[6], texcoords[7])
+				glVertex2f(pos[6], pos[7])
+
+			stmt.release()
+			#graphx.draw.drawTexturedRectangle(self.image.texture, (balloon.x-10, (balloon.y - balloon.radius)-64), (20,64))
+		
+
+class Balloon(object):
+	def __init__(self, radius, x, dy):
+		self.colour = (random.random(), random.random(), random.random())
+		self.radius = radius
+		self.x = x
+		self.y = 0
+		self.dy = dy
+		self.dx = (random.random()/8)-0.0625
+		
+	def update(self, ticks):
+		self.y += ticks * self.dy
+		self.x += ticks * self.dx
+		
+		
+		
