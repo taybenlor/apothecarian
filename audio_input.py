@@ -146,12 +146,7 @@ class InputStream(Thread):
 		self.closed = True
  
 	def get_bpm(self):
-		if len(self.beats) < 2:
-			return 0
-		start = self.beats[0]
-		end = self.beats[-1]
-		mins = (end-start)/60
-		return len(self.beats)/mins
+		return -1
  
 	def get_audio_spectrum(self, buckets=100):
 		if self.audio_data == None:

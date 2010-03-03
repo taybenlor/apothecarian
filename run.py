@@ -10,11 +10,10 @@ from OpenGL.GL import *
 # Apparently a new "feature" with 0.4 is to create a window with import (how exciting)
 # so to fix windowing issues do:
 # python -m pymt.tools.config -n
-#--------------------
 
+#--------------------
 stream = InputStream()
 stream.start()
-
 i = 0
 visualisations = [BasicVisualisation, CircleVisualisation, ParticleVisualisation, GarethVis, WaveVisualisation, BalloonVisualisation]
 #visualisations = [BasicVisualisation, CircleVisualisation, ParticleVisualisation, GarethVis, WaveVisualisation, ThreedVis] ThreedVis breaks drawing at the moment
@@ -29,6 +28,7 @@ change = MTButton(label='Change Visualisation', pos=(20,20),size=(100, 50))
 root = MTWidget()
 root.add_widget(container)
 root.add_widget(change)
+
 
 @change.event
 def on_press(touch):

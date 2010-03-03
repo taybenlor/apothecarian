@@ -1,3 +1,5 @@
+from __future__ import division
+
 from pymt import *
 from audio_input import InputStream
 import random, time, math
@@ -6,6 +8,8 @@ import pygame
 from pygame.locals import *
 from pygame.color import *
 import pymunk as pm
+from touch import TouchStream
+import gareth
 
 def add_ball(space):
     mass = 1
@@ -48,6 +52,9 @@ def draw_lines(lines):
 		graphx.colors.set_color((1.0, 1.0, 1.0))
 		graphx.draw.drawLine([p1[0], p1[1], p2[0], p2[1]], 5)
 
+def draw_line(line):
+	graphx.draw.drawLine([line[0][0], line[0][1] + 200, line[1][0], line[1][1] + 200], 1)
+
 	
 def draw_ball(ball):
     p = int(ball.body.position.x), 600-int(ball.body.position.y)
@@ -77,11 +84,41 @@ class Visualisation(MTWidget):
 	def visualise(self, ticks):
 		pass
  
-
- 
-class GarethVis(Visualisation):
+class TouchVisualisation(Visualisation):
 	def __init__(self, **kwargs):
-		super(GarethVis, self).__init__(**kwargs)
+		super(TouchVisualisation, self).__init__(**kwargs)
+		self.touch = TouchStream()
+		self.touch.start()
+		
+	def visualise(self, ticks):
+		graphx.colors.set_color(0.0,0.0,0.0)
+		graphx.draw.drawRectangle((self.x,self.y), (self.width, self.height))
+		self.fg_color = (1.0, 1.0, 1.0)
+		graphx.colors.set_color(*self.fg_color)
+		val = 100
+		
+		touches = self.touch.isTouch()
+		
+		if (len(touches) > 0):
+			for each in touches:
+				draw_line(each)
+				
+		int_points = []		
+				
+		for each1 in touches:
+			for each2 in touches:
+				ret =  gareth.line_intersection(each1[0][0], each1[0][1], each1[1][0], each1[1][1], each2[0][0], each2[0][1], each2[1][0], each2[1][1])
+				if (len(ret) > 1):
+					int_points.append((ret[0], ret[1]))
+				
+		for each in int_points:
+			graphx.draw.drawCircle((each[0], each[1] + 200), 5)
+				
+			#graphx.draw.drawCircle(self.center, len(touches))
+		
+class CircleVisualisation(Visualisation):
+	def __init__(self, **kwargs):
+		super(CircleVisualisation, self).__init__(**kwargs)
 		self.fg_color = (1.0, 1.0, 1.0)
 
 		pm.init_pymunk()
