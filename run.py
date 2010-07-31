@@ -1,7 +1,6 @@
 from pymt import *
 from audio_input import InputStream
 from visualisation import *
-from gareth_visualisation import *
 import pygame
 from OpenGL.GL import *
 
@@ -15,7 +14,7 @@ from OpenGL.GL import *
 stream = InputStream()
 stream.start()
 i = 0
-visualisations = [BasicVisualisation, CircleVisualisation, ParticleVisualisation, GarethVis, WaveVisualisation, BalloonVisualisation]
+visualisations = [BasicVisualisation, ParticleVisualisation, WaveVisualisation, BalloonVisualisation]
 #visualisations = [BasicVisualisation, CircleVisualisation, ParticleVisualisation, GarethVis, WaveVisualisation, ThreedVis] ThreedVis breaks drawing at the moment
 
 #b = MTScatterWidget(width = int(pymt_config.get('graphics', 'width')), height = int(pymt_config.get('graphics', 'height')))
